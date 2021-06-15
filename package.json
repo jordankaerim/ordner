@@ -1,0 +1,21 @@
+{
+  "name": "ordner",
+  "version": "0.5.0",
+  "description": "A simple file-based router for Polka",
+  "main": "src/index.js",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordankaerim/ordner.git"
+  },
+  "keywords": [
+    "polka",
+    "router"
+  ],
+  "author": "Karim Jordan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jordankaerim/ordner/issues"
+  },
+  "homepage": "https://github.com/jordankaerim/ordner#readme"
+}

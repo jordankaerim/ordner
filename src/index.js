@@ -68,12 +68,13 @@ export default async function ordner(dir, polka, opts = {}) {
         polka.use(path, ...useBeforeMethod);
       }
 
-      logging &&
-        console.log(
-          `\x1b[36m${(method === "del" ? "delete" : method)
-            .toUpperCase()
-            .padStart(6)}\x1b[0m ~> ${path}`
-        );
+      if (logging) {
+        const methodString = (method === "del" ? "delete" : method)
+          .toUpperCase()
+          .padStart(6);
+
+        console.log(`\x1b[36m${methodString}\x1b[0m ~> ${path}`);
+      }
 
       polka[method === "del" ? "delete" : method](
         path,

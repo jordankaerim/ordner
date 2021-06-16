@@ -71,7 +71,7 @@ src/
 
 ## Handlers
 
-You export handlers from your files Since `delete` is a reserved keyword in JavaScript, export a function called `del` instead to handle `DELETE` requests.
+You export handlers from your files. Since `delete` is a reserved keyword in JavaScript, export a function called `del` instead to handle `DELETE` requests.
 
 ## Middlewares
 
@@ -83,7 +83,7 @@ import { json } from "@polka/parse";
 export const useBefore = [json()];
 ```
 
-To use middlewares before a specific handler you can use `useBeforePost`, `useBeforeGet`, `useBeforePut`, `useBeforePatch`, and `useBeforeDel`.
+To use middlewares before a specific handler you can export arrays named `useBeforePost`, `useBeforeGet`, `useBeforePut`, `useBeforePatch`, and `useBeforeDel`.
 
 ```js
 import { json } from "@polka/parse";
@@ -117,7 +117,7 @@ const hook = (handler) => async (req, res, next) => {
   }
 };
 
-ordner("./src/routes", server).then(() => {
+ordner("./src/routes", server, { hook }).then(() => {
   server.listen(3000, () => {
     console.log(`> Running on localhost:3000`);
   });
@@ -126,7 +126,7 @@ ordner("./src/routes", server).then(() => {
 
 ## Svelte Kit like responses
 
-To handle responses like in Svelte Kit, simply put the following code into your `hook` function:
+To handle responses like in Svelte Kit, put the following code into your `hook` function:
 
 ```js
 const hook = (handler) => async (req, res, next) => {
@@ -141,7 +141,7 @@ const hook = (handler) => async (req, res, next) => {
 };
 ```
 
-Now you can just return a `{ status, body, headers }` object from your handlers, like you do in Svelte Kit:
+Now you can simply return a `{ status, body, headers }` object from your handlers, like you do in Svelte Kit:
 
 ```js
 export function get(req) {

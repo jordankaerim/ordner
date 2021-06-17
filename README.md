@@ -4,9 +4,18 @@ A simple file-based router for [Polka](https://github.com/lukeed/polka) inspired
 
 ![Image](https://i.ibb.co/CBSccLS/ordner.png)
 
-("Ordner" is German and means "folder")
+_("Ordner" is German and means "folder")_
 
 **Note: This is an ES6 module.**
+
+1. [Install](#install)
+2. [Usage](#usage)
+3. [Logging](#logging)
+4. [Params](#params)
+5. [Handlers](#handlers)
+6. [Middlewares](#middlewares)
+7. [Hook](#hook)
+8. [Hook Recipes](#hook-recipes)
 
 ## Install
 
@@ -27,7 +36,7 @@ src/
 ├─ index.js
 ```
 
-Import Ordner and call it with the folder path containing your routes as the first argument and your Polka instance as the second one. It returns a promise that resolves when all routes have been mounted:
+Import Ordner and call it with the path of your folder containing the routes as the first argument and your Polka instance as the second one. It returns a promise that resolves when all routes have been mounted:
 
 ```js
 import polka from "polka";
@@ -35,10 +44,10 @@ import ordner from "ordner";
 
 const server = polka();
 
-ordner("./src/routes", server).then(() => {
-  server.listen(3000, () => {
-    console.log(`> Running on localhost:3000`);
-  });
+await ordner("./src/routes", server);
+
+server.listen(3000, () => {
+  console.log(`> Running on localhost:3000`);
 });
 ```
 
@@ -50,10 +59,10 @@ type: "module",
 
 ## Logging
 
-By default Ordner prints a list of all route handlers and middlewares it found in the specified folder and in the order they are mounted to the polka server. If you wish to disable logging, e.g. in `production`, you can turn it off by setting `logging` to `false`:
+By default Ordner prints a list of all route handlers and middlewares it found in the specified folder and in the order they are mounted on the server. If you wish to disable logging, e.g. in `production`, you can pass in an object as the third argument and and set `logging` to `false`:
 
 ```js
-ordner("./src/routes", server, { logging: false });
+await ordner("./src/routes", server, { logging: false });
 ```
 
 ## Params
@@ -61,21 +70,26 @@ ordner("./src/routes", server, { logging: false });
 To use parameters in your routes simply name your folders and files accordingly. See also [Polka's docs](https://github.com/lukeed/polka#patterns).
 
 ```
-src/
-├─ routes/
-│  ├─ users/
+routes/
+├─ blog/
+│  ├─ :slug.js
+├─ products/
+│  ├─ :id.js
+├─ users/
+│  ├─ :id/
 │  │  ├─ index.js
-│  │  ├─ :id.js
-├─ index.js
+│  │  ├─ orders.js
+│  ├─ index.js
+
 ```
 
 ## Handlers
 
-You export handlers from your files. Since `delete` is a reserved keyword in JavaScript, export a function called `del` instead to handle `DELETE` requests.
+You export handlers from your `.js` files and name them according to their HTTP method in lowercase. Since `delete` is a reserved keyword in JavaScript, export a function called `del` instead to handle `DELETE` requests.
 
 ## Middlewares
 
-To use middlewares every file can export an array of middlewares named `useBefore`. Middlewares included in this array will be mounted before any handler in the current file.
+To use middlewares every file can export an array named `useBefore`. Middlewares included in this array will be mounted before any handler in the current file.
 
 ```js
 import { json } from "@polka/parse";
@@ -90,7 +104,7 @@ import { json } from "@polka/parse";
 
 export const useBefore = [json()];
 
-export function get(req, res, next) {
+export function get(req, res) {
   res.end("Hello Ordner!");
 }
 
@@ -103,34 +117,43 @@ export function put(req, res) {
 
 ## Hook
 
-You can optionally pass a `hook` function to Ordner which is essentially a middleware wrapped around every single handler. It is useful for e.g. error handling. The `hook` function takes the `handler` as its only argument and returns a function with the `res`, `req` and `next` signature:
+You can optionally pass a `hook` function to Ordner which is essentially a  wrapper around yout handlers. It allows you easily execute additional code before and after each or just a few specific handlers. The `hook` function takes the `handler` as its only argument and returns a function with the `res` and `req` signature:
 
 ```js
 import polka from "polka";
 import ordner from "ordner";
 
-const hook = (handler) => async (req, res, next) => {
-  try {
-    await handler(req, res, next);
-  } catch (error) {
-    next(error);
-  }
+const hook = (handler) => async (req, res) => {
+  res.setHeader("Content-Type", "application/json");
+
+  await handler(req, res);
+
+  console.log("Request completed.");
 };
 
-ordner("./src/routes", server, { hook }).then(() => {
-  server.listen(3000, () => {
-    console.log(`> Running on localhost:3000`);
-  });
+await ordner("./src/routes", server, { hook });
+
+server.listen(3000, () => {
+  console.log(`> Running on localhost:3000`);
 });
 ```
 
-## Svelte Kit like responses
+**Note 1:** You must call `handler` inside your `hook` function.
 
-To handle responses like in Svelte Kit, put the following code into your `hook` function:
+**Note 2:** The `hook` is only applied to request handlers not middlewares.
+
+## Hook Recipes
+
+1. Sending responses like in Svelte Kit
+2. Obscuring IDs from your database
+
+### Sending responses like in Svelte Kit
+
+To handle responses similar to how you do in Svelte Kit, put the following code into your `hook` function:
 
 ```js
-const hook = (handler) => async (req, res, next) => {
-  const { status = 200, headers = {}, body } = await handler(req, res, next);
+const hook = (handler) => async (req, res) => {
+  const { status = 200, headers = {}, body } = await handler(req);
 
   res.writeHead(status, {
     ...headers,
@@ -141,7 +164,7 @@ const hook = (handler) => async (req, res, next) => {
 };
 ```
 
-Now you can simply return a `{ status, body, headers }` object from your handlers, like you do in Svelte Kit:
+Now you can simply return a `{ status, body, headers }` object from your handlers:
 
 ```js
 export function get(req) {
@@ -150,3 +173,86 @@ export function get(req) {
   };
 }
 ```
+
+### Obscuring IDs from your database
+
+Another useful thing you can do with `hook` is obscuring IDs from your database. Database IDs are usually sequential numbers. Displaying them in your url like `/products/17` might tempt your visitors to play around with them in a way you do not want them to. You can use the `hook` function to encode all IDs to something that looks more random before sending a response and decode them again when recieving requests.
+
+```js
+function decode(obj) {
+  const array = Object.entries(obj).map(([key, value]) => {
+    if (key === "id" || key.endsWith("_id")) {
+      value = Number(Buffer.from(value, "base64").toString("ascii"));
+    }
+
+    return [key, value];
+  });
+
+  return Object.fromEntries(array);
+}
+
+function encode(obj) {
+  const array = Object.entries(obj).map(([key, value]) => {
+    if (key === "id" || key.endsWith("_id")) {
+      value = Buffer.from(String(value)).toString("base64");
+    }
+
+    return [key, value];
+  });
+
+  return Object.fromEntries(array);
+}
+
+const hook = (handler) => async (req, res) => {
+  // decode the ID from the incoming request
+  req.params = decode(req.params);
+
+  // handle the request by the corresponding handler
+  let { status = 200, headers = {}, body } = await handler(req);
+
+  // encode all IDs
+  body = encode(body);
+
+  // send the response
+  res.writeHead(status, {
+    ...headers,
+    "Content-Type": "application/json",
+  });
+
+  res.end(JSON.stringify(body));
+};
+```
+
+Create the following route: `/students/:id.js`
+
+```js
+const students = [
+  {
+    id: 173,
+    first_name: "Tony",
+    last_name: "Stark",
+    school_id: 19,
+  },
+];
+
+export function get(req) {
+  const student = students.find(({ id }) => id === req.params.id);
+
+  return {
+    body: student,
+  };
+}
+```
+
+A `GET` request to `/students/MTcz` will now return the following response:
+
+```json
+{
+  "id": "MTcz",
+  "first_name": "Tony",
+  "last_name": "Stark",
+  "school_id": "MTk="
+}
+```
+
+The above example uses base 64 encoding. But since base 64 can easily be decoded by someone you might want to consider using something like [Hashids](https://hashids.org/) instead.

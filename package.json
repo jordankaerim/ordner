@@ -1,6 +1,6 @@
 {
   "name": "ordner",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "A simple file-based router for Polka",
   "main": "src/index.js",
   "type": "module",
